@@ -1,0 +1,86 @@
+'use client';
+
+import { Conversation } from '@/types';
+import { useAuthStore } from '@/store/auth.store';
+import Avatar from '@/components/shared/avatar';
+import { Phone, Video, MoreVertical } from 'lucide-react';
+import { formatLastSeen } from '@/lib/utils';
+
+interface Props {
+  conversation: Conversation;
+  isTyping?: boolean;
+  typingUser?: string;
+}
+
+export default function ChatHeader({
+  conversation,
+  isTyping,
+  typingUser,
+}: Props) {
+  const { user } = useAuthStore();
+
+  const otherMember = conversation.members?.find(
+    (m) => m.userId !== user?.id,
+  );
+
+  const name =
+    conversation.type === 'DM'
+      ? otherMember?.user?.displayName ?? 'Unknown'
+      : conversation.name ?? 'Group Chat';
+
+  const avatar =
+    conversation.type === 'DM'
+      ? otherMember?.user?.avatarUrl
+      : conversation.avatarUrl;
+
+  const isOnline =
+    conversation.type === 'DM'
+      ? otherMember?.user?.isOnline
+      : undefined;
+
+  const subtitle = isTyping
+    ? `${typingUser} is typing...`
+    : conversation.type === 'DM'
+    ? isOnline
+      ? 'Online'
+      : otherMember?.user?.lastSeen
+      ? `Last seen ${formatLastSeen(otherMember.user.lastSeen)}`
+      : 'Offline'
+    : `${conversation.members?.length ?? 0} members`;
+
+  return (
+    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800 bg-gray-900">
+      <div className="flex items-center gap-3">
+        <Avatar
+          src={avatar}
+          name={name}
+          size="md"
+          isOnline={isOnline}
+        />
+        <div>
+          <p className="text-white font-semibold text-sm">{name}</p>
+          <p
+            className={
+              isTyping ? 'text-green-400 text-xs' : 'text-gray-400 text-xs'
+            }
+          >
+            {subtitle}
+          </p>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <button className="w-9 h-9 rounded-full hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <Phone size={18} />
+        </button>
+        <button className="w-9 h-9 rounded-full hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <Video size={18} />
+        </button>
+        <button className="w-9 h-9 rounded-full hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition">
+          <MoreVertical size={18} />
+        </button>
+      </div>
+    </div>
+  );
+}
