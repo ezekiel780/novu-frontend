@@ -23,7 +23,7 @@ export default function NotificationsPage() {
   const { mutate: deleteNotification } = useDeleteNotification();
 
   const notifications =
-    data?.pages.flatMap((page) => page.notifications) ?? [];
+    data?.pages.flatMap((page: any) => page.notifications) ?? [];
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
