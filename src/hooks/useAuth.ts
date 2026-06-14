@@ -43,7 +43,7 @@ export const useLogin = () => {
     mutationFn: (dto: LoginDto) => authApi.login(dto),
     onSuccess: (data) => {
       setAuth(data.user, data.accessToken, data.refreshToken);
-      router.push('/');
+      router.push('/chat');
     },
   });
 };

@@ -10,6 +10,6 @@ export const authBtnSecondary =
   'w-full border border-purple-200 hover:border-purple-400 text-purple-700 hover:text-purple-900 text-base font-medium py-2.5 rounded-lg transition flex items-center justify-center';
 
 export const authCardClass =
-  'bg-white rounded-xl p-6 border border-purple-100 shadow-md shadow-purple-100/40';
+  'bg-white rounded-xl p-6 border border-purple-100 shadow-md shadow-purple-100/40 min-h-[460px]';
 
 export const authFieldClass = 'space-y-1';
