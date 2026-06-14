@@ -19,7 +19,7 @@ export default function CallsPage() {
     isFetchingNextPage,
   } = useCalls();
 
-  const allCalls = data?.pages.flatMap((page: { calls: any[]; nextCursor: string | null }) => page.calls) ?? [];
+  const allCalls = (data?.pages ?? []).flatMap((page: any) => page.calls ?? []);
 
   const filteredCalls =
     filter === 'missed'
