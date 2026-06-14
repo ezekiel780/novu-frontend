@@ -2,6 +2,7 @@ import {
   useInfiniteQuery,
   useMutation,
   useQueryClient,
+  InfiniteData,
 } from '@tanstack/react-query';
 import * as messagesApi from '@/lib/messages.api';
 import { Message } from '@/types';
@@ -9,7 +10,7 @@ import { Message } from '@/types';
 type MessagesPage = { messages: Message[]; nextCursor: string | null };
 
 export const useMessages = (conversationId: string) => {
-  return useInfiniteQuery<MessagesPage, Error, MessagesPage, [string, string], string | undefined>({
+  return useInfiniteQuery<MessagesPage, Error, InfiniteData<MessagesPage>, [string, string], string | undefined>({
     queryKey: ['messages', conversationId],
     queryFn: ({ pageParam }) =>
       messagesApi.getMessages(conversationId, pageParam),
