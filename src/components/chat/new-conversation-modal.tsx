@@ -226,7 +226,17 @@ export default function NewConversationModal({ onClose }: Props) {
                         </button>
                       ) : (
                         <button
-                          onClick={() => addContact(user.id)}
+                          onClick={() =>
+                            addContact(user.id, {
+                              onSuccess: () => {
+                                setSelectedUsers((prev) =>
+                                  prev.find((u) => u.id === user.id) ? prev : [...prev, user],
+                                );
+                                setTab('contacts');
+                                setQuery('');
+                              },
+                            })
+                          }
                           disabled={addingContact}
                           className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 bg-green-400/10 px-3 py-1.5 rounded-lg transition"
                         >

@@ -3,14 +3,18 @@ import {
   useQuery,
   useMutation,
   useQueryClient,
+  InfiniteData,
 } from '@tanstack/react-query';
 import * as callsApi from '@/lib/calls.api';
+import { Call } from '@/types';
+
+type CallsPage = { calls: Call[]; nextCursor: string | null };
 
 export const useCalls = () => {
-  return useInfiniteQuery({
+  return useInfiniteQuery<CallsPage, Error, InfiniteData<CallsPage>, string[], string | undefined>({
     queryKey: ['calls'],
     queryFn: ({ pageParam }) =>
-      callsApi.getCalls(pageParam as string),
+      callsApi.getCalls(pageParam),
     initialPageParam: undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
