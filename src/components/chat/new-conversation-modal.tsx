@@ -17,7 +17,7 @@ export default function NewConversationModal({ onClose }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<'contacts' | 'add'>('contacts');
   const [query, setQuery] = useState('');
-  const [selectedUsers, setSelectedUsers] = useState<UserType[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
   const [type, setType] = useState<'DM' | 'GROUP'>('DM');
   const [groupName, setGroupName] = useState('');
 
