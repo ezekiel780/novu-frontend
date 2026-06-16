@@ -42,7 +42,7 @@ export default function ChatWindow({ conversationId }: Props) {
 
   // Flatten pages
   const messages =
-    data?.pages.flatMap((page: any) => page.messages).reverse() ?? [];
+    data?.pages.flatMap((page: any) => page.messages) ?? [];
 
   // Scroll to bottom
   useEffect(() => {

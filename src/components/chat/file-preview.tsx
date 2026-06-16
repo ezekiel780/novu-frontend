@@ -2,7 +2,7 @@
 
 import { Media } from '@/types';
 import { formatFileSize } from '@/lib/utils';
-import { FileText, Film, Music, Download, X } from 'lucide-react';
+import { FileText, Music, Download, X } from 'lucide-react';
 
 interface Props {
   media: Media;
@@ -31,13 +31,7 @@ export default function FilePreview({ media, onRemove, showRemove }: Props) {
             <X size={12} className="text-white" />
           </button>
         )}
-        
-          href={media.fileUrl}
-          download={media.fileName ?? 'image'}
-          target="_blank"
-          rel="noreferrer"
-          className="absolute bottom-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
-        >
+        <a href={media.fileUrl} download={media.fileName ?? 'image'} target="_blank" rel="noreferrer" className="absolute bottom-2 right-2 w-7 h-7 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
           <Download size={14} className="text-white" />
         </a>
       </div>
@@ -47,16 +41,9 @@ export default function FilePreview({ media, onRemove, showRemove }: Props) {
   if (isVideo) {
     return (
       <div className="relative group max-w-xs">
-        <video
-          src={media.fileUrl}
-          controls
-          className="rounded-xl max-w-full max-h-48"
-        />
+        <video src={media.fileUrl} controls className="rounded-xl max-w-full max-h-48" />
         {showRemove && onRemove && (
-          <button
-            onClick={onRemove}
-            className="absolute top-2 right-2 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center"
-          >
+          <button onClick={onRemove} className="absolute top-2 right-2 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center">
             <X size={12} className="text-white" />
           </button>
         )}
@@ -71,9 +58,7 @@ export default function FilePreview({ media, onRemove, showRemove }: Props) {
           <Music size={18} className="text-purple-400" />
         </div>
         <div className="flex-1 overflow-hidden">
-          <p className="text-white text-xs font-medium truncate">
-            {media.fileName ?? 'Audio'}
-          </p>
+          <p className="text-white text-xs font-medium truncate">{media.fileName ?? 'Audio'}</p>
           <audio src={media.fileUrl} controls className="w-full mt-1 h-8" />
         </div>
         {showRemove && onRemove && (
@@ -91,28 +76,15 @@ export default function FilePreview({ media, onRemove, showRemove }: Props) {
         <FileText size={18} className="text-blue-400" />
       </div>
       <div className="flex-1 overflow-hidden">
-        <p className="text-white text-xs font-medium truncate">
-          {media.fileName ?? 'File'}
-        </p>
-        <p className="text-gray-400 text-xs">
-          {formatFileSize(media.fileSize)}
-        </p>
+        <p className="text-white text-xs font-medium truncate">{media.fileName ?? 'File'}</p>
+        <p className="text-gray-400 text-xs">{formatFileSize(media.fileSize)}</p>
       </div>
       <div className="flex items-center gap-2">
-        
-          href={media.fileUrl}
-          download={media.fileName ?? 'file'}
-          target="_blank"
-          rel="noreferrer"
-          className="text-gray-400 hover:text-white transition"
-        >
+        <a href={media.fileUrl} download={media.fileName ?? 'file'} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-white transition">
           <Download size={16} />
         </a>
         {showRemove && onRemove && (
-          <button
-            onClick={onRemove}
-            className="text-gray-400 hover:text-red-400 transition"
-          >
+          <button onClick={onRemove} className="text-gray-400 hover:text-red-400 transition">
             <X size={16} />
           </button>
         )}
