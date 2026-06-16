@@ -3,9 +3,10 @@
 import { Message } from '@/types';
 import { useAuthStore } from '@/store/auth.store';
 import { format } from 'date-fns';
-import { Check, CheckCheck, Trash2, Pencil } from 'lucide-react';
+import { Check, CheckCheck, Trash2, Pencil, FileText, Music, Download } from 'lucide-react';
 import Avatar from '@/components/shared/avatar';
-import { cn } from '@/lib/utils';
+import { cn, formatFileSize } from '@/lib/utils';
+import FilePreview from './file-preview';
 
 interface Props {
   message: Message;
@@ -38,8 +39,11 @@ export default function MessageBubble({ message, onEdit, onDelete }: Props) {
     );
   }
 
+  const hasMedia = message.media && message.media.length > 0;
+
   return (
     <div className={cn('flex gap-2 group', isMe && 'flex-row-reverse')}>
+
       {/* Avatar */}
       {!isMe && (
         <Avatar
@@ -81,54 +85,78 @@ export default function MessageBubble({ message, onEdit, onDelete }: Props) {
           </div>
         )}
 
-        {/* Bubble */}
-        <div
-          className={cn(
-            'relative px-4 py-2.5 rounded-2xl',
-            isMe
-              ? 'bg-green-600 text-white rounded-br-sm'
-              : 'bg-gray-800 text-gray-100 rounded-bl-sm',
-          )}
-        >
-          {/* Media */}
-          {message.messageType === 'IMAGE' &&
-            message.media?.[0] && (
-              <img
-                src={message.media[0].fileUrl}
-                alt="Image"
-                className="rounded-xl max-w-full mb-1"
-              />
+        {/* Media only — no bubble wrapper */}
+        {hasMedia && !message.content && (
+          <div className="space-y-1 relative group">
+            {message.media!.map((m) => (
+              <FilePreview key={m.id} media={m} />
+            ))}
+
+            {/* Actions on hover */}
+            {isMe && (
+              <div className="absolute -top-8 right-0 hidden group-hover:flex items-center gap-1 bg-gray-800 rounded-lg p-1 shadow-lg z-10">
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(message.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-700 transition"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Bubble — with or without media */}
+        {(message.content || (hasMedia && message.content)) && (
+          <div
+            className={cn(
+              'relative px-4 py-2.5 rounded-2xl',
+              isMe
+                ? 'bg-green-600 text-white rounded-br-sm'
+                : 'bg-gray-800 text-gray-100 rounded-bl-sm',
+            )}
+          >
+            {/* Media inside bubble with caption */}
+            {hasMedia && message.content && (
+              <div className="mb-2 space-y-1">
+                {message.media!.map((m) => (
+                  <FilePreview key={m.id} media={m} />
+                ))}
+              </div>
             )}
 
-          {/* Text */}
-          {message.content && (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-              {message.content}
-            </p>
-          )}
+            {/* Text */}
+            {message.content && (
+              <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                {message.content}
+              </p>
+            )}
 
-          {/* Actions on hover */}
-          {isMe && (
-            <div className="absolute -top-8 right-0 hidden group-hover:flex items-center gap-1 bg-gray-800 rounded-lg p-1 shadow-lg">
-              {onEdit && (
-                <button
-                  onClick={() => onEdit(message)}
-                  className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-700 transition"
-                >
-                  <Pencil size={14} />
-                </button>
-              )}
-              {onDelete && (
-                <button
-                  onClick={() => onDelete(message.id)}
-                  className="p-1.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-700 transition"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+            {/* Actions on hover */}
+            {isMe && (
+              <div className="absolute -top-8 right-0 hidden group-hover:flex items-center gap-1 bg-gray-800 rounded-lg p-1 shadow-lg z-10">
+                {onEdit && message.messageType === 'TEXT' && (
+                  <button
+                    onClick={() => onEdit(message)}
+                    className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-700 transition"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => onDelete(message.id)}
+                    className="p-1.5 text-gray-400 hover:text-red-400 rounded-lg hover:bg-gray-700 transition"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Time + Status */}
         <div

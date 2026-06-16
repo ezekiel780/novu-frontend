@@ -42,7 +42,7 @@ export default function ChatWindow({ conversationId }: Props) {
 
   // Flatten pages
   const messages =
-    data?.pages.flatMap((page) => page.messages).reverse() ?? [];
+    data?.pages.flatMap((page: any) => page.messages).reverse() ?? [];
 
   // Scroll to bottom
   useEffect(() => {
@@ -52,10 +52,8 @@ export default function ChatWindow({ conversationId }: Props) {
   // Join room and mark as read
   useEffect(() => {
     if (!socket || !conversationId) return;
-
     socket.emit('conversation:join', conversationId);
     messagesApi.markAsRead(conversationId);
-
     return () => {
       socket.emit('conversation:leave', conversationId);
     };
@@ -70,7 +68,6 @@ export default function ChatWindow({ conversationId }: Props) {
         ['messages', conversationId],
         (old: any) => {
           if (!old) return old;
-          const firstPage = old.pages[old.pages.length - 1];
           return {
             ...old,
             pages: old.pages.map((page: any, i: number) =>
@@ -81,11 +78,7 @@ export default function ChatWindow({ conversationId }: Props) {
           };
         },
       );
-
-      // Invalidate conversations to update last message
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
-
-      // Mark as read
       if (message.senderId !== user?.id) {
         messagesApi.markAsRead(conversationId);
         socket.emit('message:read', { conversationId });
@@ -99,13 +92,8 @@ export default function ChatWindow({ conversationId }: Props) {
       );
       setTypingUser(member?.user?.displayName ?? 'Someone');
       setIsTyping(true);
-
-      if (typingTimeoutRef.current)
-        clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(
-        () => setIsTyping(false),
-        3000,
-      );
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 3000);
     };
 
     const handleTypingStop = (data: { userId: string }) => {
@@ -125,16 +113,15 @@ export default function ChatWindow({ conversationId }: Props) {
 
   // Send message
   const handleSend = useCallback(
-    (content: string, replyToId?: string) => {
+    (content: string, replyToId?: string, mediaId?: string) => {
       if (!socket) return;
-
       socket.emit('message:send', {
         conversationId,
-        content,
-        messageType: 'TEXT',
+        content: content || undefined,
+        messageType: mediaId ? 'FILE' : 'TEXT',
         replyToId,
+        mediaId,
       });
-
       setReplyTo(null);
     },
     [socket, conversationId],
@@ -149,12 +136,10 @@ export default function ChatWindow({ conversationId }: Props) {
     socket?.emit('typing:stop', { conversationId });
   }, [socket, conversationId]);
 
-  // Edit message
   const handleEdit = (message: Message) => {
     setEditingMessage(message);
   };
 
-  // Delete message
   const handleDelete = (id: string) => {
     deleteMessage(id);
   };
@@ -178,7 +163,7 @@ export default function ChatWindow({ conversationId }: Props) {
       />
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-20 md:pb-4">
 
         {/* Load more */}
         {hasNextPage && (
@@ -203,7 +188,7 @@ export default function ChatWindow({ conversationId }: Props) {
           </div>
         )}
 
-        {messages.map((message) => (
+        {messages.map((message: Message) => (
           <MessageBubble
             key={message.id}
             message={message}
@@ -229,14 +214,16 @@ export default function ChatWindow({ conversationId }: Props) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <MessageInput
-        onSend={handleSend}
-        replyTo={replyTo}
-        onCancelReply={() => setReplyTo(null)}
-        onTyping={handleTyping}
-        onStopTyping={handleStopTyping}
-      />
+      {/* Input — add bottom padding for mobile nav */}
+      <div className="mb-16 md:mb-0">
+        <MessageInput
+          onSend={handleSend}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onTyping={handleTyping}
+          onStopTyping={handleStopTyping}
+        />
+      </div>
     </div>
   );
 }

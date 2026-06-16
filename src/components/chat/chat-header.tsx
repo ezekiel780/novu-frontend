@@ -3,10 +3,11 @@
 import { Conversation } from '@/types';
 import { useAuthStore } from '@/store/auth.store';
 import Avatar from '@/components/shared/avatar';
-import { Phone, Video, MoreVertical } from 'lucide-react';
+import { Phone, Video, MoreVertical, ArrowLeft } from 'lucide-react';
 import { formatLastSeen } from '@/lib/utils';
 import { useWebRTCContext } from '@/providers/webrtc.provider';
 import { useInitiateCall } from '@/hooks/useCalls';
+import { useRouter } from 'next/navigation';
 
 interface Props {
   conversation: Conversation;
@@ -22,6 +23,7 @@ export default function ChatHeader({
   const { user } = useAuthStore();
   const { initiateCall } = useWebRTCContext();
   const { mutate: createCall } = useInitiateCall();
+  const router = useRouter();
 
   const otherMember = conversation.members?.find(
     (m) => m.userId !== user?.id,
@@ -54,7 +56,6 @@ export default function ChatHeader({
 
   const handleCall = (type: 'VOICE' | 'VIDEO') => {
     if (!otherMember) return;
-
     createCall(
       { receiverId: otherMember.userId, type },
       {
@@ -71,18 +72,21 @@ export default function ChatHeader({
   };
 
   return (
-    <div className="flex items-center justify-between px-5 py-3 border-b border-gray-800 bg-gray-900">
-      <div className="flex items-center gap-3">
+    <div className="flex items-center justify-between px-3 md:px-5 py-3 border-b border-gray-800 bg-gray-900">
+      <div className="flex items-center gap-2 md:gap-3">
+
+        {/* Back button — mobile only */}
+        <button
+          onClick={() => router.push('/')}
+          className="md:hidden text-gray-400 hover:text-white transition p-1"
+        >
+          <ArrowLeft size={20} />
+        </button>
+
         <Avatar src={avatar} name={name} size="md" isOnline={isOnline} />
         <div>
           <p className="text-white font-semibold text-sm">{name}</p>
-          <p
-            className={
-              isTyping
-                ? 'text-green-400 text-xs'
-                : 'text-gray-400 text-xs'
-            }
-          >
+          <p className={isTyping ? 'text-green-400 text-xs' : 'text-gray-400 text-xs'}>
             {subtitle}
           </p>
         </div>
@@ -90,7 +94,7 @@ export default function ChatHeader({
 
       {/* Actions — DM only */}
       {conversation.type === 'DM' && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           <button
             onClick={() => handleCall('VOICE')}
             className="w-9 h-9 rounded-full hover:bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white transition"
