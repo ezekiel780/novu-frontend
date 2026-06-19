@@ -99,24 +99,16 @@ export const useWebRTC = () => {
 
     pc.ontrack = (event) => {
       setRemoteStream(event.streams[0]);
-      // ← Only set active when remote stream arrives
       setCallState('active');
     };
 
+    // Only log connection state — never auto end the call
     pc.onconnectionstatechange = () => {
-      console.log('Connection state:', pc.connectionState);
-      // ← Only end call if it was actually accepted and connected before
-      if (
-        callAcceptedRef.current &&
-        (pc.connectionState === 'failed' ||
-          pc.connectionState === 'closed')
-      ) {
-        endCall();
-      }
+      console.log('WebRTC connection state:', pc.connectionState);
     };
 
     return pc;
-  }, [socket, endCall]);
+  }, [socket]);
 
   const getMediaStream = async (callType: 'VOICE' | 'VIDEO') => {
     return navigator.mediaDevices.getUserMedia({
@@ -166,7 +158,7 @@ export const useWebRTC = () => {
         callerAvatar: user?.avatarUrl,
       });
 
-      // ← Mark missed after 60 seconds if no answer
+      // Mark missed after 60 seconds if no answer
       missedCallTimerRef.current = setTimeout(() => {
         if (currentCallRef.current?.callId && !callAcceptedRef.current) {
           updateCallStatus({
@@ -196,7 +188,6 @@ export const useWebRTC = () => {
 
       currentCallRef.current = incomingCall;
 
-      // ← Add tracks to existing peer connection
       if (peerConnection.current) {
         stream.getTracks().forEach((track) =>
           peerConnection.current!.addTrack(track, stream),
@@ -208,8 +199,7 @@ export const useWebRTC = () => {
         callId: incomingCall.callId,
       });
 
-      // ← Do NOT set active here — wait for remote stream via ontrack
-
+      // Do NOT set active here — wait for remote stream via ontrack
     } catch (error) {
       console.error('Error accepting call:', error);
       declineCall();
@@ -253,19 +243,15 @@ export const useWebRTC = () => {
       });
       setCallState('incoming');
 
-      // ← Create peer connection and set remote description
-      // but do NOT get media yet — wait for user to accept
       const pc = createPeerConnection();
       peerConnection.current = pc;
       await pc.setRemoteDescription(
         new RTCSessionDescription(data.offer),
       );
 
-      // ← Create answer ready but send only after accept
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      // Store answer to send when user accepts
       socket.emit('call:accept', {
         callerId: data.callerId,
         answer,
@@ -284,7 +270,7 @@ export const useWebRTC = () => {
         await peerConnection.current.setRemoteDescription(
           new RTCSessionDescription(data.answer),
         );
-        // ← active state set by ontrack when stream arrives
+        // active state set by ontrack when stream arrives
       }
     };
 
