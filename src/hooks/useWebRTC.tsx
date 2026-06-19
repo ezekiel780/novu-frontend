@@ -54,6 +54,36 @@ export const useWebRTC = () => {
   const peerConnection = useRef<RTCPeerConnection | null>(null);
   const currentCallRef = useRef<IncomingCallData | null>(null);
   const missedCallTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const callAcceptedRef = useRef<boolean>(false);
+
+  const clearMissedTimer = () => {
+    if (missedCallTimerRef.current) {
+      clearTimeout(missedCallTimerRef.current);
+      missedCallTimerRef.current = null;
+    }
+  };
+
+  const endCall = useCallback(() => {
+    clearMissedTimer();
+
+    peerConnection.current?.close();
+    peerConnection.current = null;
+
+    localStream?.getTracks().forEach((track) => track.stop());
+
+    if (currentCallRef.current) {
+      socket?.emit('call:end', {
+        receiverId: currentCallRef.current.callerId,
+      });
+    }
+
+    currentCallRef.current = null;
+    callAcceptedRef.current = false;
+    setCallState('idle');
+    setIncomingCall(null);
+    setLocalStream(null);
+    setRemoteStream(null);
+  }, [localStream, socket]);
 
   const createPeerConnection = useCallback(() => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
@@ -69,20 +99,24 @@ export const useWebRTC = () => {
 
     pc.ontrack = (event) => {
       setRemoteStream(event.streams[0]);
+      // ← Only set active when remote stream arrives
+      setCallState('active');
     };
 
     pc.onconnectionstatechange = () => {
+      console.log('Connection state:', pc.connectionState);
+      // ← Only end call if it was actually accepted and connected before
       if (
-        pc.connectionState === 'disconnected' ||
-        pc.connectionState === 'failed' ||
-        pc.connectionState === 'closed'
+        callAcceptedRef.current &&
+        (pc.connectionState === 'failed' ||
+          pc.connectionState === 'closed')
       ) {
         endCall();
       }
     };
 
     return pc;
-  }, [socket]);
+  }, [socket, endCall]);
 
   const getMediaStream = async (callType: 'VOICE' | 'VIDEO') => {
     return navigator.mediaDevices.getUserMedia({
@@ -90,31 +124,6 @@ export const useWebRTC = () => {
       video: callType === 'VIDEO',
     });
   };
-
-  const endCall = useCallback(() => {
-    // Clear missed call timer
-    if (missedCallTimerRef.current) {
-      clearTimeout(missedCallTimerRef.current);
-      missedCallTimerRef.current = null;
-    }
-
-    peerConnection.current?.close();
-    peerConnection.current = null;
-
-    localStream?.getTracks().forEach((track) => track.stop());
-
-    if (currentCallRef.current) {
-      socket?.emit('call:end', {
-        receiverId: currentCallRef.current.callerId,
-      });
-    }
-
-    currentCallRef.current = null;
-    setCallState('idle');
-    setIncomingCall(null);
-    setLocalStream(null);
-    setRemoteStream(null);
-  }, [localStream, socket]);
 
   // ── Initiate Call ─────────────────────────
   const initiateCall = async (
@@ -142,8 +151,6 @@ export const useWebRTC = () => {
       };
 
       currentCallRef.current = callData;
-
-      // ← Show receiver info immediately
       setIncomingCall(callData);
       setCallState('calling');
 
@@ -159,16 +166,16 @@ export const useWebRTC = () => {
         callerAvatar: user?.avatarUrl,
       });
 
-      // ← Mark as missed after 30 seconds if no answer
+      // ← Mark missed after 60 seconds if no answer
       missedCallTimerRef.current = setTimeout(() => {
-        if (currentCallRef.current?.callId) {
+        if (currentCallRef.current?.callId && !callAcceptedRef.current) {
           updateCallStatus({
             id: currentCallRef.current.callId,
             status: 'MISSED',
           });
+          endCall();
         }
-        endCall();
-      }, 30000);
+      }, 60000);
 
     } catch (error) {
       console.error('Error initiating call:', error);
@@ -180,29 +187,29 @@ export const useWebRTC = () => {
   const acceptCall = async () => {
     if (!incomingCall) return;
 
-    // Clear missed timer when accepted
-    if (missedCallTimerRef.current) {
-      clearTimeout(missedCallTimerRef.current);
-      missedCallTimerRef.current = null;
-    }
+    clearMissedTimer();
+    callAcceptedRef.current = true;
 
     try {
       const stream = await getMediaStream(incomingCall.callType);
       setLocalStream(stream);
 
-      const pc = createPeerConnection();
-      peerConnection.current = pc;
-
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-
       currentCallRef.current = incomingCall;
+
+      // ← Add tracks to existing peer connection
+      if (peerConnection.current) {
+        stream.getTracks().forEach((track) =>
+          peerConnection.current!.addTrack(track, stream),
+        );
+      }
 
       socket?.emit('call:accept', {
         callerId: incomingCall.callerId,
         callId: incomingCall.callId,
       });
 
-      setCallState('active');
+      // ← Do NOT set active here — wait for remote stream via ontrack
+
     } catch (error) {
       console.error('Error accepting call:', error);
       declineCall();
@@ -213,19 +220,14 @@ export const useWebRTC = () => {
   const declineCall = () => {
     if (incomingCall) {
       socket?.emit('call:decline', { callerId: incomingCall.callerId });
-
-      // ← Mark as declined in DB
       updateCallStatus({
         id: incomingCall.callId,
         status: 'DECLINED',
       });
     }
-
-    if (missedCallTimerRef.current) {
-      clearTimeout(missedCallTimerRef.current);
-      missedCallTimerRef.current = null;
-    }
-
+    clearMissedTimer();
+    peerConnection.current?.close();
+    peerConnection.current = null;
     setCallState('idle');
     setIncomingCall(null);
   };
@@ -251,15 +253,19 @@ export const useWebRTC = () => {
       });
       setCallState('incoming');
 
+      // ← Create peer connection and set remote description
+      // but do NOT get media yet — wait for user to accept
       const pc = createPeerConnection();
       peerConnection.current = pc;
       await pc.setRemoteDescription(
         new RTCSessionDescription(data.offer),
       );
 
+      // ← Create answer ready but send only after accept
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
+      // Store answer to send when user accepts
       socket.emit('call:accept', {
         callerId: data.callerId,
         answer,
@@ -271,34 +277,30 @@ export const useWebRTC = () => {
       userId: string;
       answer: RTCSessionDescriptionInit;
     }) => {
-      // Clear missed timer — call was answered
-      if (missedCallTimerRef.current) {
-        clearTimeout(missedCallTimerRef.current);
-        missedCallTimerRef.current = null;
-      }
+      clearMissedTimer();
+      callAcceptedRef.current = true;
 
       if (peerConnection.current) {
         await peerConnection.current.setRemoteDescription(
           new RTCSessionDescription(data.answer),
         );
-        setCallState('active');
+        // ← active state set by ontrack when stream arrives
       }
     };
 
     const handleCallDeclined = () => {
-      // Mark as declined
       if (currentCallRef.current?.callId) {
         updateCallStatus({
           id: currentCallRef.current.callId,
           status: 'DECLINED',
         });
       }
+      clearMissedTimer();
       endCall();
     };
 
     const handleCallEnded = () => {
-      // Mark as completed
-      if (currentCallRef.current?.callId) {
+      if (currentCallRef.current?.callId && callAcceptedRef.current) {
         updateCallStatus({
           id: currentCallRef.current.callId,
           status: 'COMPLETED',
@@ -312,9 +314,13 @@ export const useWebRTC = () => {
       candidate: RTCIceCandidateInit;
     }) => {
       if (peerConnection.current) {
-        await peerConnection.current.addIceCandidate(
-          new RTCIceCandidate(data.candidate),
-        );
+        try {
+          await peerConnection.current.addIceCandidate(
+            new RTCIceCandidate(data.candidate),
+          );
+        } catch (err) {
+          console.error('ICE candidate error:', err);
+        }
       }
     };
 
